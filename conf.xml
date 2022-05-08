@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+	<logpath></logpath>
+	<APIPath></APIPath>
+	<APIKey></APIKey>
+	<APIlocation_id></APIlocation_id>
+	<APIcompany_id></APIcompany_id>
+	<APIcategorieid></APIcategorieid>
+	<!--CPU,GPU,HDD/SSD,RAM,Mainboard,Computer/Notebook-->
+	<APIfieldsetid></APIfieldsetid>
+</configuration>
