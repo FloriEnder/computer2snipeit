@@ -1,7 +1,6 @@
 Imports System.Net.NetworkInformation
 Imports System.Management
 Imports System.Xml
-Imports Microsoft.Win32
 Imports RestSharp
 Imports Newtonsoft.Json.Linq
 Imports Newtonsoft.Json
@@ -119,7 +118,7 @@ Module Program
 		Console.WriteLine("macadresse")
 		Macadresse()
 		If Var.noXML = False Then
-			'Xmlauswertung()
+			Xmlauswertung()
 		End If
 		Logschreiber(Log:="Startzeit -> " & Var.Startzeit, art:="log", section:="Main")
 		Logschreiber(Log:="LogVerzeichnix -> " & Var.logpath, art:="log", section:="Main")
@@ -138,8 +137,6 @@ Module Program
 					APIRAM()
 					Console.WriteLine("APIHDD_SSD")
 					APIHDD_SSD()
-					Console.WriteLine("APIMacAdressen")
-					'SQLMacAdressen()
 					Console.WriteLine("ReversCheck")
 					ReversCheck()
 				Else
@@ -269,7 +266,6 @@ Module Program
 			Dim RestSharpResponse As Task(Of RestResponse)
 			RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequest)
 			Dim Data As JObject = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-			Console.WriteLine("Get Modell")
 			If Convert.ToInt32(Data("total")) = 0 Then
 				''Get HerstellerID
 				Dim herstellerid As Integer = 0
@@ -278,8 +274,6 @@ Module Program
 				RestSharpRequestGetManufacturers.AddHeader("Accept", "application/json")
 				RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequestGetManufacturers)
 				Data = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-				Console.WriteLine(RestSharpRequest.Resource.ToString)
-				Console.WriteLine("Get manufacturers" & vbCrLf & Data.ToString)
 				If Convert.ToInt32(Data("total")) = 0 Then
 					Dim RestSharpRequestAddManufacturers As New RestRequest("manufacturers", Method.Post)
 					RestSharpRequestAddManufacturers.AddHeader("Authorization", "Bearer " & Var.APIKey)
@@ -287,7 +281,6 @@ Module Program
 					RestSharpRequestAddManufacturers.AddJsonBody(New With {Key .name = hersteller})
 					RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequestAddManufacturers)
 					Data = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-					Console.WriteLine("ADD manufacturers" & vbCrLf & Data.ToString)
 					If Data("status").ToString = "success" Then
 						Dim Data1 As JObject = Data("payload")
 						herstellerid = Data1("id")
@@ -315,7 +308,6 @@ Module Program
 				End If
 				RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequestAddModell)
 				Data = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-				Console.WriteLine("Add Model" & vbCrLf & Data.ToString)
 				If Data("status").ToString = "success" Then
 					Dim Data1 As JObject = Data("payload")
 					Return Convert.ToInt32(Data1("id"))
@@ -343,7 +335,6 @@ Module Program
 		Dim RestSharpResponse As Task(Of RestResponse)
 		RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequest)
 		Dim Data As JObject = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-		Console.WriteLine("Get components")
 		Select Case Convert.ToInt32(Data.Item("total"))
 			Case 0
 				Dim RestSharpRequestAddcomponents As New RestRequest("components", Method.Post)
@@ -352,8 +343,6 @@ Module Program
 				RestSharpRequestAddcomponents.AddJsonBody(New With {Key .name = name, Key .qty = 1, Key .category_id = category_id, Key .location_id = Var.APIlocation_id, Key .company_id = Var.APIcompany_id})
 				RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequestAddcomponents)
 				Data = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-				Console.WriteLine("ADD components")
-				Console.WriteLine(Data.ToString)
 				If Data("status").ToString = "success" Then
 					Dim Data2 As JObject = Data("payload")
 					If APICheckout_in(Convert.ToInt32(Data2("id")), True) = False Then
@@ -403,10 +392,8 @@ Module Program
 		Dim Data3 As JObject = JsonConvert.DeserializeObject(RestSharpResponseGetRemaining.Result.Content.ToString)
 		remainingcomponents = Convert.ToInt32(Data3.Item("remaining"))
 		qty = Convert.ToInt32(Data3.Item("qty"))
-		Console.WriteLine("APICheckout_in")
 		Dim RestSharpRequestCheckout As New RestRequest("")
 		If checkout = True Then ''vor checkout anzhal falls nötig erhöhen
-			Console.WriteLine("checkout = true")
 			RestSharpRequestCheckout.Resource = "components/" & id.ToString & "/checkout"
 			RestSharpRequestCheckout.AddJsonBody(New With {Key .assigned_to = Var.computerid, Key .assigned_qty = 1})
 			If remainingcomponents = 0 Or remainingcomponents > 1 Then
@@ -421,7 +408,6 @@ Module Program
 				End If
 				RestSharpResponseUpdateQTY = RestSharpclient.ExecuteAsync(RestSharpRequestUpdateQTY)
 				Dim Data4 As JObject = JsonConvert.DeserializeObject(RestSharpResponseUpdateQTY.Result.Content.ToString)
-				Console.WriteLine("Patch QTY components")
 				If Data4("status").ToString = "success" Then
 				Else
 					Logschreiber(Log:="Patch QTY components" & vbCrLf & Data4.ToString, art:="fehler", section:="APICheckout_in-Patch_QTY_components")
@@ -429,14 +415,12 @@ Module Program
 				End If
 			End If
 		Else ''CheckIn
-			Console.WriteLine("checkout = false")
 			Dim RestSharpRequestCheckInID As New RestRequest("components/" & id.ToString & "/assets")
 			RestSharpRequestCheckInID.AddHeader("Authorization", "Bearer " & Var.APIKey)
 			RestSharpRequestCheckInID.AddHeader("Accept", "application/json")
 			Dim RestSharpResponseCheckInID As Task(Of RestResponse)
 			RestSharpResponseCheckInID = RestSharpclient.ExecuteAsync(RestSharpRequestCheckInID)
 			Dim Data1 As JObject = JsonConvert.DeserializeObject(RestSharpResponseCheckInID.Result.Content.ToString)
-			Console.WriteLine("APICheckout_in" & vbCrLf & Data1.ToString)
 			Dim assigned_pivot_id As Integer
 			If Convert.ToInt32(Data1("total")) > 0 Then
 				Dim JArray As JArray = Data1("rows")
@@ -457,7 +441,6 @@ Module Program
 		Dim RestSharpResponse As Task(Of RestResponse)
 		RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequestCheckout)
 		Dim Data As JObject = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-		Console.WriteLine("APICheckout_in" & vbCrLf & Data.ToString)
 		If Data("status").ToString = "success" Then
 			If checkout = False Then ''Nach Checkin Anzahl veringern
 				If remainingcomponents = 0 Or remainingcomponents > 1 Then
@@ -472,7 +455,6 @@ Module Program
 					End If
 					RestSharpResponseUpdateQTY = RestSharpclient.ExecuteAsync(RestSharpRequestUpdateQTY)
 					Dim Data4 As JObject = JsonConvert.DeserializeObject(RestSharpResponseUpdateQTY.Result.Content.ToString)
-					Console.WriteLine("Patch QTY components")
 					If Data4("status").ToString = "success" Then
 					Else
 						Logschreiber(Log:="Patch QTY components" & vbCrLf & Data4.ToString, art:="fehler", section:="APICheckout_in-Patch_QTY_components")
@@ -936,8 +918,10 @@ Module Program
 		Loop
 		Virenschutz = Virenschutz.Remove(Virenschutz.Length - 1)
 		Dim macadresse As String = ""
-		For j As Integer = 0 To Var.macadressen.GetLength(0)
-			macadresse = macadresse + Var.macadressen(i, 0) & "  " & Var.macadressen(i, 1) & "  " & Var.macadressen(i, 2) & vbCrLf
+		For j As Integer = 0 To Var.macadressen.GetLength(0) - 1
+			If Var.macadressen(j, 0) <> "" Then
+				macadresse = macadresse + Var.macadressen(j, 0) & ","
+			End If
 		Next
 		Dim RestSharpclient As New RestClient(Var.APIPath)
 		Dim RestSharpRequest As New RestRequest("hardware?search=" & Var.biosSerialNumber(0) & "&model_id=" & idmodell & "&components=true")
@@ -946,16 +930,14 @@ Module Program
 		Dim RestSharpResponse As Task(Of RestResponse)
 		RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequest)
 		Dim Data As JObject = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-		Console.WriteLine("Get Asset")
 		Select Case Convert.ToInt32(Data("total"))
 			Case 0
 				Dim RestSharpRequestAddAsset As New RestRequest("hardware", Method.Post)
 				RestSharpRequestAddAsset.AddHeader("Authorization", "Bearer " & Var.APIKey)
 				RestSharpRequestAddAsset.AddHeader("Accept", "application/json")
-				RestSharpRequestAddAsset.AddJsonBody(New With {Key .asset_tag = Var.computername, Key .status_id = 2, Key .model_id = idmodell, Key .name = Var.computername, Key ._snipeit_computername_6 = Var.computername, Key .serial = Var.biosSerialNumber(0), Key ._snipeit_virenschutz_5 = Virenschutz, Key ._snipeit_letzter_benutzer_7 = Var.curbenutzer, Key ._snipeit_bios_version_9 = Var.biosName(0)})
+				RestSharpRequestAddAsset.AddJsonBody(New With {Key .asset_tag = Var.computername, Key .status_id = 2, Key .model_id = idmodell, Key .name = Var.computername, Key ._snipeit_computername_6 = Var.computername, Key .serial = Var.biosSerialNumber(0), Key ._snipeit_virenschutz_5 = Virenschutz, Key ._snipeit_letzter_benutzer_7 = Var.curbenutzer, Key ._snipeit_bios_version_9 = Var.biosName(0), Key ._snipeit_mac_adresse_computer_10 = macadresse})
 				RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequestAddAsset)
 				Data = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-				Console.WriteLine("ADD APIAddAsset")
 				If Data("status").ToString = "success" Then
 					Dim Data1 As JObject = Data("payload")
 					Var.computerid = Convert.ToInt32(Data1("id"))
@@ -972,10 +954,9 @@ Module Program
 				Dim RestSharpRequestUpdateAsset As New RestRequest("hardware/" & Var.computerid.ToString, Method.Patch)
 				RestSharpRequestUpdateAsset.AddHeader("Authorization", "Bearer " & Var.APIKey)
 				RestSharpRequestUpdateAsset.AddHeader("Accept", "application/json")
-				RestSharpRequestUpdateAsset.AddJsonBody(New With {Key .asset_tag = Var.computername, Key .name = Var.computername, Key ._snipeit_computername_6 = Var.computername, Key ._snipeit_virenschutz_5 = Virenschutz, Key ._snipeit_letzter_benutzer_7 = Var.curbenutzer, Key ._snipeit_letzter_durchlauf_8 = Now.ToString, Key ._snipeit_bios_version_9 = Var.biosName(0)})
+				RestSharpRequestUpdateAsset.AddJsonBody(New With {Key .asset_tag = Var.computername, Key .name = Var.computername, Key ._snipeit_computername_6 = Var.computername, Key ._snipeit_virenschutz_5 = Virenschutz, Key ._snipeit_letzter_benutzer_7 = Var.curbenutzer, Key ._snipeit_letzter_durchlauf_8 = Now.ToString, Key ._snipeit_bios_version_9 = Var.biosName(0), Key ._snipeit_mac_adresse_computer_10 = macadresse})
 				RestSharpResponse = RestSharpclient.ExecuteAsync(RestSharpRequestUpdateAsset)
 				Data = JsonConvert.DeserializeObject(RestSharpResponse.Result.Content.ToString)
-				Console.WriteLine("ADD APIAddAsset")
 				If Data("status").ToString = "success" Then
 					Logschreiber(Log:="Info APIUpdateAsset" & vbCrLf & "Asset erfolgreich aktualisiert", art:="Info", section:="APIUpdateAsset")
 				Else
@@ -990,18 +971,20 @@ Module Program
 		Select Case Var.cpuName.Length
 			Case 1
 				Dim found As Boolean = False
-				For Each JObject As JObject In Var.APIcomponents
-					If JObject.Item("name").ToString = (Var.cpuName(0) & " | " & Var.cpuManufacturer(0)) Then
-						found = True
-						If Var.APICheckedcomponents.Length = 1 Then
-							Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
-							ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-						Else
-							ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-							Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+				If Var.APIcomponents.Count <> 0 Then
+					For Each JObject As JObject In Var.APIcomponents
+						If JObject.Item("name").ToString = (Var.cpuName(0) & " | " & Var.cpuManufacturer(0)) Then
+							found = True
+							If Var.APICheckedcomponents.Length = 1 Then
+								Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
+								ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+							Else
+								ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+								Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+							End If
 						End If
-					End If
-				Next
+					Next
+				End If
 				If found = False Then
 					If APIcomponentsAdd((Var.cpuName(0) & " | " & Var.cpuManufacturer(0)), Var.APIcategorieid(0)) = False Then
 						Logschreiber(Log:="APIcomponentsAdd", art:="fehler", section:="APICPU")
@@ -1010,26 +993,28 @@ Module Program
 			Case > 1
 				For i As Integer = 0 To Var.cpuName.Length - 1
 					Dim found As Boolean = False
-					For Each JObject As JObject In Var.APIcomponents
-						If JObject.Item("name").ToString = (Var.cpuName(0) & " | " & Var.cpuManufacturer(0)) Then
-							Dim found2 As Boolean = False
-							For Each j As Integer In Var.APICheckedcomponents
-								If j = Convert.ToInt32(JObject.Item("id")) Then
-									found2 = True
+					If Var.APIcomponents.Count <> 0 Then
+						For Each JObject As JObject In Var.APIcomponents
+							If JObject.Item("name").ToString = (Var.cpuName(0) & " | " & Var.cpuManufacturer(0)) Then
+								Dim found2 As Boolean = False
+								For Each j As Integer In Var.APICheckedcomponents
+									If j = Convert.ToInt32(JObject.Item("id")) Then
+										found2 = True
+									End If
+								Next
+								If found2 = False Then
+									If Var.APICheckedcomponents.Length = 1 Then
+										Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
+										ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+									Else
+										ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+										Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+									End If
+									found = True
 								End If
-							Next
-							If found2 = False Then
-								If Var.APICheckedcomponents.Length = 1 Then
-									Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
-									ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-								Else
-									ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-									Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
-								End If
-								found = True
 							End If
-						End If
-					Next
+						Next
+					End If
 					If found = False Then
 						If APIcomponentsAdd((Var.cpuName(0) & " | " & Var.cpuManufacturer(0)), Var.APIcategorieid(0)) = False Then
 							Logschreiber(Log:="APIcomponentsAdd", art:="fehler", section:="APICPU")
@@ -1042,18 +1027,20 @@ Module Program
 		Select Case Var.gpuName.Length
 			Case 1
 				Dim found As Boolean = False
-				For Each JObject As JObject In Var.APIcomponents
-					If JObject.Item("name").ToString = (Var.gpuName(0) & " | " & Var.gpuVideoProcessor(0)) Then
-						found = True
-						If Var.APICheckedcomponents.Length = 1 Then
-							Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
-							ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-						Else
-							ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-							Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+				If Var.APIcomponents.Count <> 0 Then
+					For Each JObject As JObject In Var.APIcomponents
+						If JObject.Item("name").ToString = (Var.gpuName(0) & " | " & Var.gpuVideoProcessor(0)) Then
+							found = True
+							If Var.APICheckedcomponents.Length = 1 Then
+								Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
+								ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+							Else
+								ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+								Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+							End If
 						End If
-					End If
-				Next
+					Next
+				End If
 				If found = False Then
 					If APIcomponentsAdd((Var.gpuName(0) & " | " & Var.gpuVideoProcessor(0)), Var.APIcategorieid(1)) = False Then
 						Logschreiber(Log:="APIcomponentsAdd", art:="fehler", section:="APIGPU")
@@ -1062,26 +1049,28 @@ Module Program
 			Case > 1
 				For i As Integer = 0 To Var.gpuName.Length - 1
 					Dim found As Boolean = False
-					For Each JObject As JObject In Var.APIcomponents
-						If JObject.Item("name").ToString = (Var.gpuName(i) & " | " & Var.gpuVideoProcessor(i)) Then
-							Dim found2 As Boolean = False
-							For Each j As Integer In Var.APICheckedcomponents
-								If j = Convert.ToInt32(JObject.Item("id")) Then
-									found2 = True
+					If Var.APIcomponents.Count <> 0 Then
+						For Each JObject As JObject In Var.APIcomponents
+							If JObject.Item("name").ToString = (Var.gpuName(i) & " | " & Var.gpuVideoProcessor(i)) Then
+								Dim found2 As Boolean = False
+								For Each j As Integer In Var.APICheckedcomponents
+									If j = Convert.ToInt32(JObject.Item("id")) Then
+										found2 = True
+									End If
+								Next
+								If found2 = False Then
+									If Var.APICheckedcomponents.Length = 1 Then
+										Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
+										ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+									Else
+										ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+										Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+									End If
+									found = True
 								End If
-							Next
-							If found2 = False Then
-								If Var.APICheckedcomponents.Length = 1 Then
-									Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
-									ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-								Else
-									ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-									Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
-								End If
-								found = True
 							End If
-						End If
-					Next
+						Next
+					End If
 					If found = False Then
 						If APIcomponentsAdd((Var.gpuName(i) & " | " & Var.gpuVideoProcessor(i)), Var.APIcategorieid(1)) = False Then
 							Logschreiber(Log:="APIcomponentsAdd", art:="fehler", section:="APIGPU")
@@ -1094,18 +1083,20 @@ Module Program
 		Select Case Var.ramseriennummer.Length
 			Case 1
 				Dim found As Boolean = False
-				For Each JObject As JObject In Var.APIcomponents
-					If JObject.Item("name").ToString = (Var.ramPartNumber(0) & " | " & Var.ramManufacturer(0)) Then
-						found = True
-						If Var.APICheckedcomponents.Length = 1 Then
-							Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
-							ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-						Else
-							ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-							Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+				If Var.APIcomponents.Count <> 0 Then
+					For Each JObject As JObject In Var.APIcomponents
+						If JObject.Item("name").ToString = (Var.ramPartNumber(0) & " | " & Var.ramManufacturer(0)) Then
+							found = True
+							If Var.APICheckedcomponents.Length = 1 Then
+								Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
+								ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+							Else
+								ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+								Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+							End If
 						End If
-					End If
-				Next
+					Next
+				End If
 				If found = False Then
 					If APIcomponentsAdd((Var.ramPartNumber(0) & " | " & Var.ramManufacturer(0)), Var.APIcategorieid(3), Var.ramseriennummer(0)) = False Then
 						Logschreiber(Log:="APIcomponentsAdd", art:="fehler", section:="APIRAM")
@@ -1114,26 +1105,28 @@ Module Program
 			Case > 1
 				For i As Integer = 0 To Var.ramPartNumber.Length - 1
 					Dim found As Boolean = False
-					For Each JObject As JObject In Var.APIcomponents
-						If JObject.Item("name").ToString = (Var.ramPartNumber(i) & " | " & Var.ramManufacturer(i)) Then
-							Dim found2 As Boolean = False
-							For Each j As Integer In Var.APICheckedcomponents
-								If j = Convert.ToInt32(JObject.Item("id")) Then
-									found2 = True
+					If Var.APIcomponents.Count <> 0 Then
+						For Each JObject As JObject In Var.APIcomponents
+							If JObject.Item("name").ToString = (Var.ramPartNumber(i) & " | " & Var.ramManufacturer(i)) Then
+								Dim found2 As Boolean = False
+								For Each j As Integer In Var.APICheckedcomponents
+									If j = Convert.ToInt32(JObject.Item("id")) Then
+										found2 = True
+									End If
+								Next
+								If found2 = False Then
+									If Var.APICheckedcomponents.Length = 1 Then
+										Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
+										ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+									Else
+										ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+										Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+									End If
+									found = True
 								End If
-							Next
-							If found2 = False Then
-								If Var.APICheckedcomponents.Length = 1 Then
-									Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
-									ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-								Else
-									ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-									Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
-								End If
-								found = True
 							End If
-						End If
-					Next
+						Next
+					End If
 					If found = False Then
 						If APIcomponentsAdd((Var.ramPartNumber(i) & " | " & Var.ramManufacturer(i)), Var.APIcategorieid(3), Var.ramseriennummer(i)) = False Then
 							Logschreiber(Log:="APIcomponentsAdd", art:="fehler", section:="APIRAM")
@@ -1146,18 +1139,20 @@ Module Program
 		Select Case Var.festplatteSerialNumber.Length
 			Case 1
 				Dim found As Boolean = False
-				For Each JObject As JObject In Var.APIcomponents
-					If JObject.Item("name").ToString = Var.festplatteModel(0) Then
-						found = True
-						If Var.APICheckedcomponents.Length = 1 Then
-							Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
-							ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-						Else
-							ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-							Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+				If Var.APIcomponents.Count <> 0 Then
+					For Each JObject As JObject In Var.APIcomponents
+						If JObject.Item("name").ToString = Var.festplatteModel(0) Then
+							found = True
+							If Var.APICheckedcomponents.Length = 1 Then
+								Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
+								ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+							Else
+								ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+								Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+							End If
 						End If
-					End If
-				Next
+					Next
+				End If
 				If found = False Then
 					If APIcomponentsAdd(Var.festplatteModel(0), Var.APIcategorieid(2), Var.festplatteSerialNumber(0)) = False Then
 						Logschreiber(Log:="APIcomponentsAdd", art:="fehler", section:="APIRAM")
@@ -1166,26 +1161,28 @@ Module Program
 			Case > 1
 				For i As Integer = 0 To Var.festplatteSerialNumber.Length - 1
 					Dim found As Boolean = False
-					For Each JObject As JObject In Var.APIcomponents
-						If JObject.Item("name").ToString = Var.festplatteModel(i) Then
-							Dim found2 As Boolean = False
-							For Each j As Integer In Var.APICheckedcomponents
-								If j = Convert.ToInt32(JObject.Item("id")) Then
-									found2 = True
+					If Var.APIcomponents.Count <> 0 Then
+						For Each JObject As JObject In Var.APIcomponents
+							If JObject.Item("name").ToString = Var.festplatteModel(i) Then
+								Dim found2 As Boolean = False
+								For Each j As Integer In Var.APICheckedcomponents
+									If j = Convert.ToInt32(JObject.Item("id")) Then
+										found2 = True
+									End If
+								Next
+								If found2 = False Then
+									If Var.APICheckedcomponents.Length = 1 Then
+										Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
+										ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+									Else
+										ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
+										Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
+									End If
+									found = True
 								End If
-							Next
-							If found2 = False Then
-								If Var.APICheckedcomponents.Length = 1 Then
-									Var.APICheckedcomponents(0) = Convert.ToInt32(JObject.Item("id"))
-									ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-								Else
-									ReDim Preserve Var.APICheckedcomponents(Var.APICheckedcomponents.Length)
-									Var.APICheckedcomponents(Var.APICheckedcomponents.Length - 1) = Convert.ToInt32(JObject.Item("id"))
-								End If
-								found = True
 							End If
-						End If
-					Next
+						Next
+					End If
 					If found = False Then
 						If APIcomponentsAdd(Var.festplatteModel(i), Var.APIcategorieid(2), Var.festplatteSerialNumber(i)) = False Then
 							Logschreiber(Log:="APIcomponentsAdd", art:="fehler", section:="APIRAM")
@@ -1195,22 +1192,22 @@ Module Program
 		End Select
 	End Sub
 	Sub ReversCheck()
-		Console.WriteLine(Var.APICheckedcomponents.Length)
-		For Each JObject As JObject In Var.APIcomponents
-			Dim found As Boolean = False
-			For Each Int As Integer In Var.APICheckedcomponents
-				Console.WriteLine(Int)
-				If Convert.ToInt32(JObject.Item("id")) <> Int Then
-					found = True
-					Exit For
+		If Var.APIcomponents.Count <> 0 Then
+			For Each JObject As JObject In Var.APIcomponents
+				Dim found As Boolean = False
+				For Each Int As Integer In Var.APICheckedcomponents
+					If Convert.ToInt32(JObject.Item("id")) <> Int Then
+						found = True
+						Exit For
+					End If
+				Next
+				If found = False Then
+					If APICheckout_in(Convert.ToInt32(JObject.Item("id")), False) = False Then
+						Logschreiber(Log:="ReversCheck", art:="fehler", section:="ReversCheck")
+					End If
 				End If
 			Next
-			If found = False Then
-				If APICheckout_in(Convert.ToInt32(JObject.Item("id")), False) = False Then
-					Logschreiber(Log:="ReversCheck", art:="fehler", section:="ReversCheck")
-				End If
-			End If
-		Next
+		End If
 	End Sub
 	''WMI
 	Sub WMIAbfragenAllgemein()
