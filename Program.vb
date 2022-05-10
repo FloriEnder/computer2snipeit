@@ -4,20 +4,16 @@ Imports System.Xml
 Imports RestSharp
 Imports Newtonsoft.Json.Linq
 Imports Newtonsoft.Json
-
 Public Class Var
 	'Allgemeine Infos
 	Public Shared logpath As String
 	Public Shared curbenutzer As String = Environment.UserDomainName & Chr(92) & Environment.UserName
 	Public Shared time As String = Date.Now.Hour.ToString & "." & Date.Now.Minute.ToString
-	Public Shared Startzeit As String = DateTime.Now.ToString
 	Public Shared computerid As Integer
 	Public Shared computername As String = Environment.MachineName
 	Public Shared noLogs As Boolean = False
 	Public Shared noXML As Boolean = True
 	Public Shared pxe As Boolean = False
-	Public Shared SoftwareRgedit As Boolean = False
-	Public Shared SoftwareWMI As Boolean = False
 	Public Shared streamdirectory As String
 	Public Shared macadressen(,) As String
 	''API Inos
@@ -71,30 +67,14 @@ Public Class Var
 	'Lizenz Inforamtionen
 	Public Shared softwareliceOA3xOriginalProductKey(0) As String
 	Public Shared softwareliceOA3xOriginalProductKeyDescription(0) As String
-	'Monitor Infomationen
-	Public Shared MonitorManufacturerName() As String
-	Public Shared MonitorProductCodeID() As String
-	Public Shared MonitorSerialNumberID() As String
-	Public Shared MonitorUserFriendlyName() As String
-	Public Shared MonitorWeekOfManufacture() As String
-	Public Shared MonitorYearOfManufacture() As String
 	'Software
 	Public Shared antivirus() As String
-	''Software WMI
-	Public Shared SoftwarewmiDescription() As String
-	Public Shared SoftwarewmiInstallDate() As String
-	Public Shared SoftwarewmiInstallLocation() As String
-	Public Shared SoftwarewmiInstallSource() As String
-	Public Shared SoftwarewmiName() As String
-	Public Shared SoftwarewmiVendor() As String
-	Public Shared SoftwarewmiVersion() As String
-	'
-	Public Shared SoftwareWMIValues(6, 1) As String
 	''Software Regedit
 	Public Shared SoftwareRegEdit(5, 1) As String
 End Class
 Module Program
 	Sub Main()
+		Logschreiber(Log:="Startzeit -> " & DateTime.Now.ToString, art:="log", section:="Main")
 		Console.WriteLine("ReadConf")
 		Readconf()
 		Console.WriteLine("Argumentcheck")
@@ -120,9 +100,6 @@ Module Program
 		If Var.noXML = False Then
 			Xmlauswertung()
 		End If
-		Logschreiber(Log:="Startzeit -> " & Var.Startzeit, art:="log", section:="Main")
-		Logschreiber(Log:="LogVerzeichnix -> " & Var.logpath, art:="log", section:="Main")
-		Console.WriteLine("LogVerzeichnix -> " & Var.logpath)
 		If Var.noAPI = False Then
 			Console.WriteLine("APITest")
 			If APITest() = Net.HttpStatusCode.OK Then
@@ -155,26 +132,12 @@ Module Program
 		Console.WriteLine(Log & "    Sektion -> " & section)
 		If Var.noLogs = False Then
 			Try
-				If Var.pxe = True Then
-					Var.logpath = "\\ELADMIN\computer2db$\logs\_PXE" & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString
-					System.IO.Directory.CreateDirectory("\\ELADMIN\computer2db$\logs\_PXE" & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString)
-					Var.streamdirectory = "\\ELADMIN\computer2db$\logs\_PXE" & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString
-				Else
-					Var.logpath = "\\ELADMIN\computer2db$\logs\" & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString
-					System.IO.Directory.CreateDirectory("\\ELADMIN\computer2db$\logs\" & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString)
-					Var.streamdirectory = "\\ELADMIN\computer2db$\logs\" & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString
-				End If
+				System.IO.Directory.CreateDirectory(Var.logpath & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString)
+				Var.streamdirectory = Var.logpath & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString
 			Catch ex As Exception
 				Try
-					If Var.pxe = True Then
-						Var.logpath = "x:\_Computer2DBLogs\" & Environment.MachineName
-						System.IO.Directory.CreateDirectory("x:\_Computer2DBLogs\" & Environment.MachineName)
-						Var.streamdirectory = "x:\_Computer2DBLogs\" & Environment.MachineName
-					Else
-						Var.logpath = "c:\tmp\" & Environment.MachineName
-						System.IO.Directory.CreateDirectory("c:\tmp\" & Environment.MachineName)
-						Var.streamdirectory = "c:\tmp\" & Environment.MachineName
-					End If
+					System.IO.Directory.CreateDirectory(".\" & Environment.MachineName)
+					Var.streamdirectory = ".\" & Environment.MachineName
 				Catch ex1 As Exception
 					Var.noLogs = True
 				End Try
@@ -484,23 +447,11 @@ Module Program
 					Case "-noLogs"
 						Console.WriteLine("Keine Logs")
 						Var.noLogs = True
-					Case "-PXE"
-						Console.WriteLine("Machine ist aus PXE gebootet")
-						Var.pxe = True
-					Case "-SoftwareWMI"
-						Console.WriteLine("Software aus WMI auslesen")
-						Var.SoftwareWMI = True
-					Case "-SoftwareRgedit"
-						Console.WriteLine("Software aus WMI auslesen")
-						Var.SoftwareRgedit = True
 					Case "-Help"
 						Console.WriteLine("-noAPI -> Nur auslesen keine Anpaasung über die API")
 						Console.WriteLine("-XML -> es erfolgt eine zusätzliche Ausgabe einer XML zusammenfassung der Computer Informationen ins Log Verzeichniss")
 						Console.WriteLine("-noLogs -> Es werden keine Logs lokal, auf dem  SMB share oder in die DB geschrieben")
-						Console.WriteLine("-PXE -> Besondere Anpassung für Computer die per PXE gestartete wurden")
 						Console.WriteLine("-Help -> zeigt das Menu an")
-						Console.WriteLine("-SoftwareWMI -> Liest Software aus WMI aus und schreibt sie in XML, funktioniert nur wenn -PXE nicht gesetzt und -XML gesetzt ist.")
-						Console.WriteLine("-SoftwareRgedit -> Liest Software aus Regedit aus und schreibt sie in XML, funktioniert nur wenn -PXE nicht gesetzt und -XML gesetzt ist.")
 						End
 					Case Else
 						Logschreiber(Log:="Fehler Argument " & s & " konnte nicht erkannt werden.", art:="fehler", section:="Main")
@@ -508,7 +459,6 @@ Module Program
 			End If
 			i += 1
 		Next
-		Console.WriteLine("das Waren alle argumente")
 	End Sub
 	Sub Readconf()
 		If (IO.File.Exists(".\Config.xml")) Then
@@ -660,7 +610,6 @@ Module Program
 				Mainboard.AppendChild(MainboardHerstellerElement)
 				MainboardHerstellerElement.AppendChild(MainboardHerstellerText)
 			Catch ex As Exception
-				Console.WriteLine("Hersteller")
 			End Try
 			Try
 				'MainboardModell
@@ -669,7 +618,6 @@ Module Program
 				Mainboard.AppendChild(MainboardModellElement)
 				MainboardModellElement.AppendChild(MainboardModellText)
 			Catch ex As Exception
-				Console.WriteLine("MainboardModell")
 			End Try
 			Try
 				'MainboardRev
@@ -678,7 +626,6 @@ Module Program
 				Mainboard.AppendChild(MainboardRevElement)
 				MainboardRevElement.AppendChild(MainboardRevText)
 			Catch ex As Exception
-				Console.WriteLine("MainboardRev")
 			End Try
 		Catch ex As Exception
 			Console.WriteLine("Mainboard " & ex.ToString)
@@ -708,7 +655,6 @@ Module Program
 				MACAdressAll.AppendChild(MACAdress)
 			Next
 		Catch ex As Exception
-			Console.WriteLine("MAC " & ex.ToString)
 		End Try
 		Try
 			''CPU
@@ -732,7 +678,6 @@ Module Program
 				CPUDeviceIDElement.AppendChild(CPUDeviceIDText)
 			Next
 		Catch ex As Exception
-			Console.WriteLine("CPU" & ex.ToString)
 		End Try
 		Try
 			''GPU
@@ -751,7 +696,6 @@ Module Program
 				GPUHerstellerElement.AppendChild(GPUHerstellerText)
 			Next
 		Catch ex As Exception
-			Console.WriteLine("GPU " & ex.ToString)
 		End Try
 		Try
 			''RAM
@@ -785,7 +729,6 @@ Module Program
 				RAMSeriennummerElement.AppendChild(RAMSeriennummerText)
 			Next
 		Catch ex As Exception
-			Console.WriteLine("RAM " & ex.ToString)
 		End Try
 		Try
 			''Festplatte
@@ -814,102 +757,17 @@ Module Program
 				FestplaltteSizeElement.AppendChild(FestplaltteSizeText)
 			Next
 		Catch ex As Exception
-			Console.WriteLine("Festplatte " & ex.ToString)
 		End Try
-		Try
-			''Monitor
-			For i As Integer = 0 To Var.MonitorManufacturerName.Length - 1 Step 1
-				Dim Monitor As XmlElement = XmlDoc.CreateElement("Monitor" & i.ToString)
-				XmlDoc.DocumentElement.PrependChild(Monitor)
-				'MonitorHertseller
-				Dim MonitorManufacturerNameElemnt As XmlElement = XmlDoc.CreateElement("Monitor_Manufactur")
-				Dim MonitorManufacturerNameText As XmlText = XmlDoc.CreateTextNode(Var.MonitorManufacturerName(i))
-				Monitor.AppendChild(MonitorManufacturerNameElemnt)
-				MonitorManufacturerNameElemnt.AppendChild(MonitorManufacturerNameText)
-				'MonitorModell
-				Dim MonitorProductCodeIDElement As XmlElement = XmlDoc.CreateElement("Monitor_Modell")
-				Dim MonitorProductCodeIDText As XmlText = XmlDoc.CreateTextNode(Var.MonitorProductCodeID(i))
-				Monitor.AppendChild(MonitorProductCodeIDElement)
-				MonitorProductCodeIDElement.AppendChild(MonitorProductCodeIDText)
-				'MonitorSeriennummer
-				Dim MonitorSerialNumberIDElement As XmlElement = XmlDoc.CreateElement("Monitor_Seriennummer")
-				Dim MonitorSerialNumberIDText As XmlText = XmlDoc.CreateTextNode(Var.MonitorSerialNumberID(i))
-				Monitor.AppendChild(MonitorSerialNumberIDElement)
-				MonitorSerialNumberIDElement.AppendChild(MonitorSerialNumberIDText)
-				'MonitorModellbezeichung
-				Dim MonitorUserFriendlyNameElement As XmlElement = XmlDoc.CreateElement("Monitor_Modellbezeichung")
-				Dim MonitorUserFriendlyNameText As XmlText = XmlDoc.CreateTextNode(Var.MonitorUserFriendlyName(i))
-				Monitor.AppendChild(MonitorUserFriendlyNameElement)
-				MonitorUserFriendlyNameElement.AppendChild(MonitorUserFriendlyNameText)
-				'MonitorHerstellungsdatum
-				Dim ProdTime As String = Var.MonitorYearOfManufacture(i) & " KW " & Var.MonitorWeekOfManufacture(i)
-				Dim ProdTimeElement As XmlElement = XmlDoc.CreateElement("Monitor_ProdWoche")
-				Dim ProdTimeSizeText As XmlText = XmlDoc.CreateTextNode(ProdTime)
-				Monitor.AppendChild(ProdTimeElement)
-				ProdTimeElement.AppendChild(ProdTimeSizeText)
-			Next
-		Catch ex As Exception
-			Console.WriteLine("Monitor " & ex.ToString)
-		End Try
-		''SoftwareWMI
-		If Var.SoftwareWMI = True Then
-			Dim SoftwareWMI As XmlElement = XmlDoc.CreateElement("Software_WMI")
-			XmlDoc.DocumentElement.PrependChild(SoftwareWMI)
-			For i As Integer = 0 To Var.SoftwarewmiDescription.Length - 1 Step 1
-				Dim SoftwareWMIchild As XmlElement = XmlDoc.CreateElement("SoftwareWNMI" & i.ToString)
-				XmlDoc.DocumentElement.PrependChild(SoftwareWMIchild)
-				'SoftwarewmiName
-				Dim SoftwarewmiNameElement As XmlElement = XmlDoc.CreateElement("Software_WMI_Name")
-				Dim SoftwarewmiNameText As XmlText = XmlDoc.CreateTextNode(Var.SoftwarewmiName(i))
-				SoftwareWMI.AppendChild(SoftwarewmiNameElement)
-				SoftwarewmiNameElement.AppendChild(SoftwarewmiNameText)
-				'SoftwarewmiDescription
-				Dim SoftwarewmiDescriptionElemnt As XmlElement = XmlDoc.CreateElement("Software_WMI_Description")
-				Dim SoftwarewmiDescriptionText As XmlText = XmlDoc.CreateTextNode(Var.SoftwarewmiDescription(i))
-				SoftwareWMI.AppendChild(SoftwarewmiDescriptionElemnt)
-				SoftwarewmiDescriptionElemnt.AppendChild(SoftwarewmiDescriptionText)
-				'SoftwarewmiInstallDate
-				Dim SoftwarewmiInstallDateElement As XmlElement = XmlDoc.CreateElement("Software_WMI_InstallDate")
-				Dim SoftwarewmiInstallDateText As XmlText = XmlDoc.CreateTextNode(Var.SoftwarewmiInstallDate(i))
-				SoftwareWMI.AppendChild(SoftwarewmiInstallDateElement)
-				SoftwarewmiInstallDateElement.AppendChild(SoftwarewmiInstallDateText)
-				'SoftwarewmiInstallLocation
-				Dim SoftwarewmiInstallLocationElement As XmlElement = XmlDoc.CreateElement("Software_WMI_InstallLocation")
-				Dim SoftwarewmiInstallLocationText As XmlText = XmlDoc.CreateTextNode(Var.SoftwarewmiInstallLocation(i))
-				SoftwareWMI.AppendChild(SoftwarewmiInstallLocationElement)
-				SoftwarewmiInstallLocationElement.AppendChild(SoftwarewmiInstallLocationText)
-				'SoftwarewmiInstallSource
-				Dim SoftwarewmiInstallSourceElement As XmlElement = XmlDoc.CreateElement("Software_WMI_InstallSource")
-				Dim SoftwarewmiInstallSourceText As XmlText = XmlDoc.CreateTextNode(Var.SoftwarewmiInstallSource(i))
-				SoftwareWMI.AppendChild(SoftwarewmiInstallSourceElement)
-				SoftwarewmiInstallSourceElement.AppendChild(SoftwarewmiInstallSourceText)
-				'SoftwarewmiVendor
-				Dim SoftwarewmiVendorElement As XmlElement = XmlDoc.CreateElement("Software_WMI_Vendor")
-				Dim SoftwarewmiVendorText As XmlText = XmlDoc.CreateTextNode(Var.SoftwarewmiVendor(i))
-				SoftwareWMI.AppendChild(SoftwarewmiVendorElement)
-				SoftwarewmiVendorElement.AppendChild(SoftwarewmiVendorText)
-				'SoftwarewmiVersion
-				Dim SoftwarewmiVersionElement As XmlElement = XmlDoc.CreateElement("Software_WMI_Version")
-				Dim SoftwarewmiVersionText As XmlText = XmlDoc.CreateTextNode(Var.SoftwarewmiVersion(i))
-				SoftwareWMI.AppendChild(SoftwarewmiVersionElement)
-				SoftwarewmiVersionElement.AppendChild(SoftwarewmiVersionText)
-			Next
-		End If
 		'Save to the XML file
 		Try
-			XmlDoc.Save("\\ELADMIN\computer2db$\logs\" & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString & "\Auswertung.xml")
+			XmlDoc.Save(Var.logpath & Environment.MachineName & "\" & DateAndTime.Now.Day.ToString & "_" & DateAndTime.Now.Month.ToString & "_" & DateAndTime.Now.Year.ToString & "\Auswertung.xml")
 		Catch ex As Exception
-			If Var.pxe = True Then
-				XmlDoc.Save("X:\Auswertung.xml")
-			Else
-				System.IO.Directory.CreateDirectory("c:\tmp\")
-				XmlDoc.Save("c:\tmp\Auswertung.xml")
-			End If
+			XmlDoc.Save(".\Auswertung.xml")
 		End Try
 	End Sub
 	''API
 	Sub APIGETAssetID()
-		Dim idmodell As Integer = APIGetModel(Var.computerModel(0), Var.computerManufacturer(0), 2, 3, True, Var.computerSystemFamily(0))
+		Dim idmodell As Integer = APIGetModel(Var.computerModel(0), Var.computerManufacturer(0), Var.APIfieldsetid, Var.APIcategorieid(5), True, Var.computerSystemFamily(0))
 		Dim Virenschutz As String = ""
 		Dim i As Integer
 		Do While i < Var.antivirus.Length
