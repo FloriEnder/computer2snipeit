@@ -74,9 +74,9 @@ Public Class Var
 End Class
 Module Program
 	Sub Main()
-		Logschreiber(Log:="Startzeit -> " & DateTime.Now.ToString, art:="log", section:="Main")
 		Console.WriteLine("ReadConf")
 		Readconf()
+		Logschreiber(Log:="Startzeit -> " & DateTime.Now.ToString, art:="log", section:="Main")
 		Console.WriteLine("Argumentcheck")
 		Argumentscheck()
 		Console.WriteLine("Logschreiber")
@@ -347,7 +347,7 @@ Module Program
 		''Anzahl verfügbarer kompmenten
 		Dim remainingcomponents, qty As Integer
 		Dim RestSharpclient As New RestClient(Var.APIPath)
-		Dim RestSharpRequestGetRemaining As New RestRequest("components/1")
+		Dim RestSharpRequestGetRemaining As New RestRequest("components/" & id.ToString)
 		RestSharpRequestGetRemaining.AddHeader("Authorization", "Bearer " & Var.APIKey)
 		RestSharpRequestGetRemaining.AddHeader("Accept", "application/json")
 		Dim RestSharpResponseGetRemaining As Task(Of RestResponse)
@@ -356,7 +356,7 @@ Module Program
 		remainingcomponents = Convert.ToInt32(Data3.Item("remaining"))
 		qty = Convert.ToInt32(Data3.Item("qty"))
 		Dim RestSharpRequestCheckout As New RestRequest("")
-		If checkout = True Then ''vor checkout anzhal falls nötig erhöhen
+		If checkout = True Then ''vor checkout anzahl falls nötig erhöhen
 			RestSharpRequestCheckout.Resource = "components/" & id.ToString & "/checkout"
 			RestSharpRequestCheckout.AddJsonBody(New With {Key .assigned_to = Var.computerid, Key .assigned_qty = 1})
 			If remainingcomponents = 0 Or remainingcomponents > 1 Then
@@ -427,7 +427,7 @@ Module Program
 			End If
 			Return True
 		Else
-			Logschreiber(Log:="Fehler APICheckout_in" & vbCrLf & Data.ToString, art:="fehler", section:="APIcomponentsAdd_Checkoutcomponent")
+			Logschreiber(Log:="Fehler APICheckout_in bei ID ->" & id.ToString & vbCrLf & Data.ToString, art:="fehler", section:="APIcomponentsAdd_Checkoutcomponent")
 			Return False
 		End If
 	End Function
@@ -818,7 +818,7 @@ Module Program
 				If Data("status").ToString = "success" Then
 					Logschreiber(Log:="Info APIUpdateAsset" & vbCrLf & "Asset erfolgreich aktualisiert", art:="Info", section:="APIUpdateAsset")
 				Else
-					Logschreiber(Log:="Fehler APIUpdateAsset" & vbCrLf & "Asset nicht erfolgreich aktualisiert", art:="fehler", section:="APIUpdateAsset")
+					Logschreiber(Log:="Fehler APIUpdateAsset" & vbCrLf & "Asset nicht erfolgreich aktualisiert" & vbCrLf & Data.ToString, art:="fehler", section:="APIUpdateAsset")
 				End If
 			Case Else
 				Logschreiber(Log:="Fehler APIGETAssetID" & vbCrLf & "Asset kann nicht Eindeutig bestimmt werden", art:="fehler", section:="APIGETAssetID")
